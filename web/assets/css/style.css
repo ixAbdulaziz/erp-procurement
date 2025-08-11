@@ -1,0 +1,7 @@
+:root { font-family: system-ui, Arial; }
+body { margin: 0; background: #f6f7f9; color: #222; }
+header { background: #1f2937; color: white; padding: 16px; }
+nav a { color: #a7f3d0; margin-inline-end: 12px; text-decoration: none; }
+main { padding: 16px; }
+.card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,.05); }
+pre { background: #0b1020; color: #7dd3fc; padding: 12px; border-radius: 8px; overflow: auto; }
