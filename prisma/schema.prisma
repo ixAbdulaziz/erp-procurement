@@ -1,6 +1,4 @@
-generator client {
-  provider = "prisma-client-js"
-}
+generator client { provider = "prisma-client-js" }
 
 datasource db {
   provider = "postgresql"
@@ -8,25 +6,25 @@ datasource db {
 }
 
 model Supplier {
-  id             Int              @id @default(autoincrement())
-  name           String           @unique
+  id             Int               @id @default(autoincrement())
+  name           String            @unique
   vatNumber      String?
   contactName    String?
   phone          String?
   email          String?
   address        String?
-  status         String           @default("active")
-  createdAt      DateTime         @default(now())
+  status         String            @default("active")
+  createdAt      DateTime          @default(now())
 
   invoices       Invoice[]
   purchaseOrders PurchaseOrder[]
+  payments       SupplierPayment[]  // دفعات على مستوى المورد
 }
 
 model Category {
   id        Int       @id @default(autoincrement())
   name      String    @unique
   createdAt DateTime  @default(now())
-
   invoices  Invoice[]
 }
 
@@ -47,7 +45,6 @@ model Invoice {
   supplier   Supplier  @relation(fields: [supplierId], references: [id])
   category   Category? @relation(fields: [categoryId], references: [id])
   files      InvoiceFile[]
-  payments   Payment[]
   poLinks    PoInvoice[]
 
   @@unique([supplierId, invoiceNumber])
@@ -65,15 +62,15 @@ model InvoiceFile {
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 }
 
-model Payment {
-  id        Int      @id @default(autoincrement())
-  invoiceId Int
-  amount    Decimal  @db.Decimal(12, 2)
-  paidAt    DateTime
-  note      String?
-  createdAt DateTime @default(now())
+model SupplierPayment {
+  id         Int      @id @default(autoincrement())
+  supplierId Int
+  amount     Decimal  @db.Decimal(12, 2)
+  paidAt     DateTime
+  note       String?
+  createdAt  DateTime @default(now())
 
-  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  supplier Supplier @relation(fields: [supplierId], references: [id])
 }
 
 model PurchaseOrder {
