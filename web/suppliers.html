@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>الموردون</title>
+  <link rel="stylesheet" href="./assets/css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>إدارة الموردين</h1>
+    <nav>
+      <a href="/">الرئيسية</a>
+      <a href="/suppliers.html">الموردون</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>إضافة مورد</h2>
+      <form id="addForm">
+        <div><label>اسم المورد *</label><br><input id="name" required></div>
+        <div><label>الاسم للتواصل</label><br><input id="contactName"></div>
+        <div><label>الهاتف</label><br><input id="phone"></div>
+        <div><label>البريد</label><br><input id="email" type="email"></div>
+        <div><label>الرقم الضريبي</label><br><input id="vatNumber"></div>
+        <div><label>العنوان</label><br><input id="address"></div>
+        <button type="submit">حفظ</button>
+        <span id="msg" style="margin-inline-start:8px;"></span>
+      </form>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>الموردون (آخر المضافين)</h2>
+      <input id="search" placeholder="بحث بالاسم..." style="margin-bottom:8px;width:100%;max-width:320px;">
+      <table id="tbl" border="1" cellpadding="8" style="width:100%;background:#fff;">
+        <thead>
+          <tr><th>#</th><th>الاسم</th><th>الهاتف</th><th>البريد</th><th>أضيف في</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="./assets/js/suppliers.js"></script>
+</body>
+</html>
