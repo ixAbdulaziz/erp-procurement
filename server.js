@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
-// ====== Uploads (مؤقت على السيرفر) ======
+// ===== Uploads (مؤقّت) =====
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 const storage = multer.diskStorage({
@@ -20,13 +20,14 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const ok = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.mimetype);
+    const ok = ['application/pdf','image/png','image/jpeg','image/webp'].includes(file.mimetype);
     cb(ok ? null : new Error('صيغة ملف غير مدعومة (PDF/PNG/JPG/WEBP فقط)'));
   }
 });
 app.use('/uploads', express.static(uploadDir));
 
-// ====== Helpers ======
+// ===== Helpers =====
+const r2 = (n)=> Math.round(Number(n) * 100) / 100;
 async function findOrCreateSupplierByName(name) {
   const clean = String(name || '').trim();
   if (!clean) throw new Error('اسم المورد مطلوب');
@@ -39,9 +40,8 @@ async function findOrCreateCategoryByName(name) {
   const existed = await prisma.category.findFirst({ where: { name: { equals: clean, mode: 'insensitive' } } });
   return existed || prisma.category.create({ data: { name: clean } });
 }
-const r2 = (n)=> Math.round(Number(n) * 100) / 100;
 
-// ====== Health ======
+// ===== Health =====
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'erp-procurement', time: new Date().toISOString() }));
 app.get('/api/db/health', async (_req, res) => {
   try {
@@ -53,7 +53,7 @@ app.get('/api/db/health', async (_req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// ====== Suppliers (اسم فقط) ======
+// ===== Suppliers (اسم فقط) =====
 app.post('/api/suppliers', async (req, res) => {
   try {
     const name = (req.body?.name || '').trim();
@@ -88,17 +88,22 @@ app.patch('/api/suppliers/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// قائمة الموردين مع إحصائيات (إجمالي فواتير/مدفوع/مستحق)
+// قائمة الموردين مع مجاميع (بدون مضاعفة الجمع)
 app.get('/api/suppliers/with-stats', async (_req, res) => {
   try {
     const rows = await prisma.$queryRaw`
       SELECT s.id, s.name, s."createdAt",
-             COALESCE(SUM(i."totalAmount"),0) AS "totalInvoices",
-             COALESCE(SUM(p.amount),0)        AS "totalPaid"
+             COALESCE(inv.total, 0) AS "totalInvoices",
+             COALESCE(pay.total, 0) AS "totalPaid"
       FROM "Supplier" s
-      LEFT JOIN "Invoice"  i ON i."supplierId" = s.id
-      LEFT JOIN "Payment"  p ON p."invoiceId"  = i.id
-      GROUP BY s.id, s.name, s."createdAt"
+      LEFT JOIN (
+        SELECT "supplierId", SUM("totalAmount") AS total
+        FROM "Invoice" GROUP BY "supplierId"
+      ) inv ON inv."supplierId" = s.id
+      LEFT JOIN (
+        SELECT "supplierId", SUM(amount) AS total
+        FROM "SupplierPayment" GROUP BY "supplierId"
+      ) pay ON pay."supplierId" = s.id
       ORDER BY s."createdAt" DESC
     `;
     const data = rows.map(r => ({
@@ -112,7 +117,7 @@ app.get('/api/suppliers/with-stats', async (_req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// ملخص مورد: فواتير + مدفوعات + مجاميع
+// ملخص مورد: فواتير + دفعات المورد + المجاميع
 app.get('/api/suppliers/:id/summary', async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -121,41 +126,69 @@ app.get('/api/suppliers/:id/summary', async (req, res) => {
 
     const invoices = await prisma.invoice.findMany({
       where: { supplierId: id },
-      include: { category: true, payments: true },
+      include: { category: true },
       orderBy: { invoiceDate: 'desc' }
     });
 
-    const invData = invoices.map(x => {
-      const paid = r2(x.payments.reduce((s,p)=> s + Number(p.amount), 0));
-      const due = r2(Number(x.totalAmount) - paid);
-      return {
-        id: x.id, invoiceNumber: x.invoiceNumber, categoryName: x.category?.name || null,
-        invoiceDate: x.invoiceDate,
-        amountBeforeTax: Number(x.amountBeforeTax),
-        taxAmount: Number(x.taxAmount),
-        totalAmount: Number(x.totalAmount),
-        notes: x.notes || null,
-        paid, due
-      };
-    });
+    const invData = invoices.map(x => ({
+      id: x.id,
+      invoiceNumber: x.invoiceNumber,
+      categoryName: x.category?.name || null,
+      invoiceDate: x.invoiceDate,
+      amountBeforeTax: Number(x.amountBeforeTax),
+      taxAmount: Number(x.taxAmount),
+      totalAmount: Number(x.totalAmount),
+      notes: x.notes || null
+    }));
 
-    const payments = invoices.flatMap(x => x.payments.map(p => ({
-      id: p.id, invoiceId: x.id, invoiceNumber: x.invoiceNumber,
-      amount: Number(p.amount), paidAt: p.paidAt, note: p.note || null
-    }))).sort((a,b)=> new Date(b.paidAt) - new Date(a.paidAt));
+    const payments = await prisma.supplierPayment.findMany({
+      where: { supplierId: id },
+      orderBy: { paidAt: 'desc' }
+    });
+    const payData = payments.map(p => ({
+      id: p.id, amount: Number(p.amount), paidAt: p.paidAt, note: p.note || null
+    }));
 
     const totals = {
       totalInvoices: r2(invData.reduce((s,x)=> s + x.totalAmount, 0)),
-      totalPaid: r2(payments.reduce((s,p)=> s + p.amount, 0)),
+      totalPaid: r2(payData.reduce((s,p)=> s + p.amount, 0)),
       due: 0
     };
-    totals.due = r2(totals.totalInvoices - totals.totalPaid); // الصيغة الصحيحة
+    totals.due = r2(totals.totalInvoices - totals.totalPaid);
 
-    res.json({ ok: true, supplier: { id: supplier.id, name: supplier.name }, invoices: invData, payments, totals });
+    res.json({ ok: true, supplier: { id: supplier.id, name: supplier.name }, invoices: invData, payments: payData, totals });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// ====== Categories ======
+// إضافة دفعة على مستوى المورد
+app.post('/api/suppliers/:id/payments', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { amount, paidAt, note } = req.body || {};
+    const a = Number(amount);
+    if (Number.isNaN(a) || a <= 0) return res.status(400).json({ ok: false, error: 'مبلغ غير صالح' });
+
+    const s = await prisma.supplier.findUnique({ where: { id } });
+    if (!s) return res.status(404).json({ ok: false, error: 'المورد غير موجود' });
+
+    await prisma.supplierPayment.create({
+      data: { supplierId: id, amount: a, paidAt: paidAt ? new Date(paidAt) : new Date(), note: note || null }
+    });
+
+    // أعد المجموعات بعد الإضافة
+    const [invSum, paySum] = await Promise.all([
+      prisma.invoice.aggregate({ _sum: { totalAmount: true }, where: { supplierId: id } }),
+      prisma.supplierPayment.aggregate({ _sum: { amount: true }, where: { supplierId: id } })
+    ]);
+    const totalInvoices = Number(invSum._sum.totalAmount || 0);
+    const totalPaid = Number(paySum._sum.amount || 0);
+    const due = r2(totalInvoices - totalPaid);
+
+    res.status(201).json({ ok: true, totals: { totalInvoices: r2(totalInvoices), totalPaid: r2(totalPaid), due } });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ===== Categories =====
 app.post('/api/categories', async (req, res) => {
   try {
     const clean = String(req.body?.name || '').trim();
@@ -170,8 +203,8 @@ app.get('/api/categories', async (_req, res) => {
   catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// ====== Invoices ======
-// إنشاء فاتورة (مبلغ ضريبة مباشرة + ملاحظات + يحسب المجموع)
+// ===== Invoices =====
+// إنشاء فاتورة (مبلغ ضريبة مباشر + ملاحظات + ملف اختياري)
 app.post('/api/invoices', async (req, res) => {
   try {
     const {
@@ -190,7 +223,7 @@ app.post('/api/invoices', async (req, res) => {
     if (Number.isNaN(tax) || tax < 0) return res.status(400).json({ ok: false, error: 'مبلغ الضريبة غير صالح' });
 
     const total = r2(amt + tax);
-    const vatRate = amt > 0 ? r2(tax / amt) : 0; // نخزن النسبة للاستفادة لاحقًا فقط
+    const vatRate = amt > 0 ? r2(tax / amt) : 0;
 
     let inv;
     try {
@@ -217,7 +250,7 @@ app.post('/api/invoices', async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// قائمة فواتير عامة (لو احتجناها)
+// قائمة فواتير عامة (بدون Paid/Due لأن السداد صار على مستوى المورد)
 app.get('/api/invoices', async (req, res) => {
   try {
     const { search = '' } = req.query;
@@ -227,19 +260,15 @@ app.get('/api/invoices', async (req, res) => {
       : {};
     const items = await prisma.invoice.findMany({
       where,
-      include: { supplier: { select: { name: true } }, category: { select: { name: true } }, payments: { select: { amount: true } } },
+      include: { supplier: { select: { name: true } }, category: { select: { name: true } } },
       orderBy: { createdAt: 'desc' }
     });
-    const data = items.map(x => {
-      const paid = r2(x.payments.reduce((s,p)=> s + Number(p.amount), 0));
-      const due  = r2(Number(x.totalAmount) - paid);
-      return {
-        id: x.id, supplierName: x.supplier.name, invoiceNumber: x.invoiceNumber,
-        categoryName: x.category?.name || null, invoiceDate: x.invoiceDate,
-        amountBeforeTax: Number(x.amountBeforeTax), taxAmount: Number(x.taxAmount),
-        totalAmount: Number(x.totalAmount), notes: x.notes || null, paid, due
-      };
-    });
+    const data = items.map(x => ({
+      id: x.id, supplierName: x.supplier.name, invoiceNumber: x.invoiceNumber,
+      categoryName: x.category?.name || null, invoiceDate: x.invoiceDate,
+      amountBeforeTax: Number(x.amountBeforeTax), taxAmount: Number(x.taxAmount),
+      totalAmount: Number(x.totalAmount), notes: x.notes || null
+    }));
     res.json({ ok: true, data, total: data.length });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
@@ -266,44 +295,25 @@ app.post('/api/invoices/:id/files', upload.single('file'), async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// تفاصيل فاتورة + مدفوعات
+// تفاصيل فاتورة (بدون مدفوع/مستحق)
 app.get('/api/invoices/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
     const x = await prisma.invoice.findUnique({
       where: { id },
-      include: { supplier: { select: { name: true } }, category: { select: { name: true } }, payments: true, files: true }
+      include: { supplier: { select: { name: true } }, category: { select: { name: true } }, files: true }
     });
     if (!x) return res.status(404).json({ ok: false, error: 'غير موجودة' });
-    const paid = r2(x.payments.reduce((s,p)=> s + Number(p.amount), 0));
-    const due  = r2(Number(x.totalAmount) - paid);
-    res.json({ ok: true, data: x, summary: { paid, due } });
+    res.json({ ok: true, data: x });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// إضافة دفعة
-app.post('/api/invoices/:id/payments', async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    const { amount, paidAt, note } = req.body || {};
-    const a = Number(amount);
-    if (Number.isNaN(a) || a <= 0) return res.status(400).json({ ok: false, error: 'مبلغ غير صالح' });
-
-    const inv = await prisma.invoice.findUnique({ where: { id }, include: { payments: true } });
-    if (!inv) return res.status(404).json({ ok: false, error: 'الفاتورة غير موجودة' });
-
-    const alreadyPaid = inv.payments.reduce((s,p)=> s + Number(p.amount), 0);
-    if (r2(alreadyPaid + a) - Number(inv.totalAmount) > 0.0001)
-      return res.status(400).json({ ok: false, error: 'إجمالي المدفوعات يتجاوز إجمالي الفاتورة' });
-
-    await prisma.payment.create({ data: { invoiceId: id, amount: a, paidAt: paidAt ? new Date(paidAt) : new Date(), note: note || null } });
-    const paid = r2(alreadyPaid + a);
-    const due  = r2(Number(inv.totalAmount) - paid);
-    res.status(201).json({ ok: true, paid, due });
-  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+// (اختياري) تعطيل المسار القديم للدفعات على الفواتير
+app.post('/api/invoices/:id/payments', (_req, res) => {
+  res.status(410).json({ ok: false, error: 'تم نقل الدفعات إلى مستوى المورد: POST /api/suppliers/:id/payments' });
 });
 
-// ====== Static UI ======
+// ===== Static =====
 app.use(express.static(path.join(__dirname, 'web')));
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'web', 'index.html')));
 
