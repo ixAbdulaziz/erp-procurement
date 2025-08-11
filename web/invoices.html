@@ -3,32 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>الفواتير</title>
+  <title>عرض الفواتير حسب المورد</title>
   <link rel="stylesheet" href="./assets/css/style.css" />
 </head>
 <body>
   <header>
-    <h1>الفواتير</h1>
+    <h1>الموردون (فواتير ومدفوعات)</h1>
     <nav>
       <a href="/">الرئيسية</a>
       <a href="/invoice_new.html">إنشاء فاتورة</a>
-      <a href="/invoices.html">عرض الفواتير</a>
+      <a href="/invoices.html">عرض الفواتير (بالمورد)</a>
     </nav>
   </header>
 
   <main>
     <section class="card">
-      <input id="q" placeholder="بحث بالاسم/الرقم..." style="width:100%;max-width:320px;margin-bottom:8px;">
       <table id="tbl" border="1" cellpadding="8" style="width:100%;background:#fff;">
         <thead>
-          <tr>
-            <th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>الفئة</th>
-            <th>قبل الضريبة</th><th>الضريبة</th><th>الإجمالي</th><th>المدفوع</th><th>المستحق</th><th>سداد</th>
-          </tr>
+          <tr><th>المورد</th><th>إجمالي الفواتير</th><th>إجمالي المدفوع</th><th>المستحق</th></tr>
         </thead>
         <tbody></tbody>
       </table>
-      <div id="msg" style="margin-top:8px;"></div>
+      <div style="margin-top:8px;">انقر على المورد لفتح صفحته.</div>
     </section>
   </main>
 
