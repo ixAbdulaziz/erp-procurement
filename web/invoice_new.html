@@ -13,7 +13,7 @@
       <a href="/">الرئيسية</a>
       <a href="/suppliers.html">الموردون</a>
       <a href="/invoice_new.html">إنشاء فاتورة</a>
-      <a href="/invoices.html">عرض الفواتير</a>
+      <a href="/invoices.html">عرض الفواتير (بالمورد)</a>
     </nav>
   </header>
 
@@ -36,10 +36,13 @@
         <div><label>التاريخ *</label><br><input id="invoiceDate" type="date" required></div>
 
         <div><label>المبلغ بدون ضريبة *</label><br><input id="amountBeforeTax" type="number" step="0.01" required></div>
-        <div><label>نسبة الضريبة</label><br><input id="vatRate" type="number" step="0.01" value="0.15"></div>
+        <div><label>مبلغ الضريبة</label><br><input id="taxAmount" type="number" step="0.01" value="0.00"></div>
+
+        <div><label>الملاحظات</label><br><textarea id="notes" rows="3" placeholder="أي تفاصيل إضافية"></textarea></div>
+
+        <div><label>ملف الفاتورة (PDF/صورة)</label><br><input id="file" type="file" accept=".pdf,image/*"></div>
 
         <div style="margin-top:8px">
-          <strong>الضريبة:</strong> <span id="taxAmount">0.00</span> —
           <strong>المجموع:</strong> <span id="totalAmount">0.00</span>
         </div>
 
