@@ -23,7 +23,7 @@
         <thead>
           <tr>
             <th>التاريخ</th><th>رقم الفاتورة</th><th>الفئة</th>
-            <th>قبل الضريبة</th><th>الضريبة</th><th>الإجمالي</th><th>المدفوع</th><th>المستحق</th>
+            <th>قبل الضريبة</th><th>الضريبة</th><th>الإجمالي</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -31,10 +31,8 @@
     </section>
 
     <section class="card" style="margin-top:16px;">
-      <h2>المدفوعات</h2>
+      <h2>المدفوعات (على مستوى المورد)</h2>
       <form id="payForm" style="margin-bottom:8px;">
-        <label>الفاتورة:</label>
-        <select id="invoiceId"></select>
         <label>المبلغ:</label>
         <input id="payAmount" type="number" step="0.01" required>
         <label>التاريخ:</label>
@@ -47,7 +45,7 @@
 
       <table id="payTbl" border="1" cellpadding="8" style="width:100%;background:#fff;">
         <thead>
-          <tr><th>التاريخ</th><th>رقم الفاتورة</th><th>المبلغ</th><th>ملاحظة</th></tr>
+          <tr><th>التاريخ</th><th>المبلغ</th><th>ملاحظة</th></tr>
         </thead>
         <tbody></tbody>
       </table>
