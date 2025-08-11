@@ -54,20 +54,15 @@ app.post('/api/suppliers', async (req, res) => {
 // قائمة الموردين + بحث
 app.get('/api/suppliers', async (req, res) => {
   try {
-    const { search = '', take = '50', skip = '0' } = req.query;
+    const { search = '' } = req.query;
     const where = search
       ? { name: { contains: String(search), mode: 'insensitive' } }
       : {};
-    const [items, total] = await prisma.$transaction([
-      prisma.supplier.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: Number(take),
-        skip: Number(skip)
-      }),
-      prisma.supplier.count({ where })
-    ]);
-    res.json({ ok: true, data: items, total });
+    const items = await prisma.supplier.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ ok: true, data: items, total: items.length });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
