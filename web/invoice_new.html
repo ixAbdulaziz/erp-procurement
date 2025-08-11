@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>إنشاء فاتورة</title>
+  <link rel="stylesheet" href="./assets/css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>إنشاء فاتورة</h1>
+    <nav>
+      <a href="/">الرئيسية</a>
+      <a href="/suppliers.html">الموردون</a>
+      <a href="/invoice_new.html">إنشاء فاتورة</a>
+      <a href="/invoices.html">عرض الفواتير</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <form id="f">
+        <div><label>اسم المورد *</label><br>
+          <input id="supplierName" list="suppliersList" required placeholder="اكتب اسم المورد">
+          <datalist id="suppliersList"></datalist>
+        </div>
+
+        <div><label>رقم الفاتورة *</label><br><input id="invoiceNumber" required></div>
+        <div><label>البيان</label><br><input id="description" placeholder="وصف مختصر"></div>
+
+        <div><label>اسم الفئة</label><br>
+          <input id="categoryName" list="catsList" placeholder="مثال: معدات، صيانة">
+          <datalist id="catsList"></datalist>
+        </div>
+
+        <div><label>التاريخ *</label><br><input id="invoiceDate" type="date" required></div>
+
+        <div><label>المبلغ بدون ضريبة *</label><br><input id="amountBeforeTax" type="number" step="0.01" required></div>
+        <div><label>نسبة الضريبة</label><br><input id="vatRate" type="number" step="0.01" value="0.15"></div>
+
+        <div style="margin-top:8px">
+          <strong>الضريبة:</strong> <span id="taxAmount">0.00</span> —
+          <strong>المجموع:</strong> <span id="totalAmount">0.00</span>
+        </div>
+
+        <button type="submit" style="margin-top:8px;">حفظ الفاتورة</button>
+        <span id="msg" style="margin-inline-start:8px;"></span>
+      </form>
+    </section>
+  </main>
+
+  <script src="./assets/js/invoice_new.js"></script>
+</body>
+</html>
