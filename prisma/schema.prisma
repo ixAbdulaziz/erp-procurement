@@ -1,4 +1,6 @@
-generator client { provider = "prisma-client-js" }
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
@@ -18,7 +20,7 @@ model Supplier {
 
   invoices       Invoice[]
   purchaseOrders PurchaseOrder[]
-  payments       SupplierPayment[]  // دفعات على مستوى المورد
+  payments       SupplierPayment[]
 }
 
 model Category {
