@@ -125,24 +125,26 @@ app.get('/api/suppliers/:id/summary', async (req, res) => {
     if (!supplier) return res.status(404).json({ ok: false, error: 'المورد غير موجود' });
 
     const invoices = await prisma.invoice.findMany({
-      where: { supplierId: id },
-      include: { category: true, files: true },
-      orderBy: { invoiceDate: 'desc' }
-    });
+  where: { supplierId: id },
+  include: { category: true, files: true },
+  orderBy: { invoiceDate: 'desc' }
+  });
 
-    const invData = invoices.map(x => ({
-      id: x.id,
-      invoiceNumber: x.invoiceNumber,
-      categoryName: x.category?.name || null,
-      invoiceDate: x.invoiceDate,
-      description: x.description || null,    // البيان
-      notes: x.notes || null,                // الملاحظات
-      amountBeforeTax: Number(x.amountBeforeTax),
-      taxAmount: Number(x.taxAmount),
-      totalAmount: Number(x.totalAmount),
-      fileUrl: x.files[0]?.fileUrl || null,  // أول ملف
-      filesCount: x.files.length || 0        // عدد الملفات
-    }));
+  const invData = invoices.map(x => ({
+  id: x.id,
+  invoiceNumber: x.invoiceNumber,
+  categoryName: x.category?.name || null,
+  invoiceDate: x.invoiceDate,
+  description: x.description || null,   // البيان
+  notes: x.notes || null,               // الملاحظات
+  amountBeforeTax: Number(x.amountBeforeTax),
+  taxAmount: Number(x.taxAmount),
+  totalAmount: Number(x.totalAmount),
+  files: x.files.map(f => ({            // ← رجّع كل الملفات
+    id: f.id, url: f.fileUrl, name: f.fileName
+   }))
+  }));
+
 
     const payments = await prisma.supplierPayment.findMany({
       where: { supplierId: id },
