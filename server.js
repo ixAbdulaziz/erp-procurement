@@ -117,7 +117,7 @@ app.get('/api/suppliers/with-stats', async (_req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// ملخص مورد: فواتير + دفعات المورد + المجاميع
+// ملخص مورد: فواتير + دفعات المورد + المجاميع (مع البيان/الملاحظات/الملفات)
 app.get('/api/suppliers/:id/summary', async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -126,7 +126,7 @@ app.get('/api/suppliers/:id/summary', async (req, res) => {
 
     const invoices = await prisma.invoice.findMany({
       where: { supplierId: id },
-      include: { category: true },
+      include: { category: true, files: true },
       orderBy: { invoiceDate: 'desc' }
     });
 
@@ -135,10 +135,13 @@ app.get('/api/suppliers/:id/summary', async (req, res) => {
       invoiceNumber: x.invoiceNumber,
       categoryName: x.category?.name || null,
       invoiceDate: x.invoiceDate,
+      description: x.description || null,    // البيان
+      notes: x.notes || null,                // الملاحظات
       amountBeforeTax: Number(x.amountBeforeTax),
       taxAmount: Number(x.taxAmount),
       totalAmount: Number(x.totalAmount),
-      notes: x.notes || null
+      fileUrl: x.files[0]?.fileUrl || null,  // أول ملف
+      filesCount: x.files.length || 0        // عدد الملفات
     }));
 
     const payments = await prisma.supplierPayment.findMany({
@@ -150,15 +153,21 @@ app.get('/api/suppliers/:id/summary', async (req, res) => {
     }));
 
     const totals = {
-      totalInvoices: r2(invData.reduce((s,x)=> s + x.totalAmount, 0)),
-      totalPaid: r2(payData.reduce((s,p)=> s + p.amount, 0)),
-      due: 0
+      totalInvoices: Math.round(invData.reduce((s,x)=> s + x.totalAmount, 0) * 100) / 100,
+      totalPaid:     Math.round(payData.reduce((s,p)=> s + p.amount, 0) * 100) / 100
     };
-    totals.due = r2(totals.totalInvoices - totals.totalPaid);
+    totals.due = Math.round((totals.totalInvoices - totals.totalPaid) * 100) / 100;
 
-    res.json({ ok: true, supplier: { id: supplier.id, name: supplier.name }, invoices: invData, payments: payData, totals });
+    res.json({
+      ok: true,
+      supplier: { id: supplier.id, name: supplier.name },
+      invoices: invData,
+      payments: payData,
+      totals
+    });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
+
 
 // إضافة دفعة على مستوى المورد
 app.post('/api/suppliers/:id/payments', async (req, res) => {
