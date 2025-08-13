@@ -1,46 +1,91 @@
-const $ = (s)=> document.querySelector(s);
-async function fillLists(){
-  const s = await fetch('/api/suppliers').then(r=>r.json());
-  if(s.ok) $('#suppliersList').innerHTML = s.data.map(x=>`<option value="${x.name}">`).join('');
-  const c = await fetch('/api/categories').then(r=>r.json());
-  if(c.ok) $('#catsList').innerHTML = c.data.map(x=>`<option value="${x.name}">`).join('');
+// web/assets/js/invoice_new.js
+const $ = (s) => document.querySelector(s);
+
+async function fillLists() {
+  const s = await fetch('/api/suppliers').then(r => r.json()).catch(()=>({ok:false}));
+  if (s?.ok) $('#suppliersList').innerHTML = s.data.map(x => `<option value="${x.name}">`).join('');
+  const c = await fetch('/api/categories').then(r => r.json()).catch(()=>({ok:false}));
+  if (c?.ok) $('#catsList').innerHTML = c.data.map(x => `<option value="${x.name}">`).join('');
 }
-function recalc(){
+
+function recalc() {
   const amt = Number($('#amountBeforeTax').value || 0);
   const tax = Number($('#taxAmount').value || 0);
-  const total = Math.round((amt + tax) * 100)/100;
+  const total = Math.round((amt + tax) * 100) / 100;
   $('#totalAmount').textContent = total.toFixed(2);
 }
-['amountBeforeTax','taxAmount'].forEach(id=> $('#'+id).addEventListener('input', recalc));
 
-$('#f').addEventListener('submit', async (e)=>{
+['amountBeforeTax', 'taxAmount'].forEach(id => $('#' + id).addEventListener('input', recalc));
+
+$('#f').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const btn = $('#f button[type="submit"]');
+  btn.disabled = true;
   $('#msg').textContent = 'جارٍ الحفظ...';
 
-  // 1) أنشئ الفاتورة (JSON)
-  const body = {
-    supplierName: $('#supplierName').value.trim(),
-    invoiceNumber: $('#invoiceNumber').value.trim(),
-    description: $('#description').value || null,
-    notes: $('#notes').value || null,
-    categoryName: $('#categoryName').value || null,
-    invoiceDate: $('#invoiceDate').value,
-    amountBeforeTax: Number($('#amountBeforeTax').value),
-    taxAmount: Number($('#taxAmount').value || 0)
-  };
-  const invRes = await fetch('/api/invoices', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-  const invOut = await invRes.json();
-  if(!invOut.ok){ $('#msg').textContent = invOut.error || 'فشل حفظ الفاتورة'; return; }
+  try {
+    // 1) إنشاء الفاتورة
+    const body = {
+      supplierName: $('#supplierName').value.trim(),
+      invoiceNumber: $('#invoiceNumber').value.trim(),
+      description: $('#description').value || null,
+      notes: $('#notes').value || null,
+      categoryName: $('#categoryName').value || null,
+      invoiceDate: $('#invoiceDate').value,
+      amountBeforeTax: Number($('#amountBeforeTax').value),
+      taxAmount: Number($('#taxAmount').value || 0)
+    };
 
-  // 2) ارفع الملف إن وُجد
-  const f = $('#file').files[0];
-  if (f){
-    const fd = new FormData(); fd.append('file', f);
-    await fetch(`/api/invoices/${invOut.data.id}/files`, { method: 'POST', body: fd });
+    const invRes = await fetch('/api/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const invOut = await invRes.json().catch(() => ({}));
+    if (!invRes.ok || !invOut.ok) {
+      $('#msg').textContent = invOut.error || 'فشل حفظ الفاتورة';
+      btn.disabled = false;
+      return;
+    }
+
+    // 2) رفع الملف (اختياري) مع فحص النوع/الحجم
+    const f = $('#file').files[0];
+    if (f) {
+      const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+      const maxBytes = 10 * 1024 * 1024; // 10MB
+      if (!allowed.includes(f.type)) {
+        $('#msg').textContent = 'تم حفظ الفاتورة لكن نوع الملف غير مدعوم (PDF/PNG/JPG/WEBP)';
+        btn.disabled = false;
+        return;
+      }
+      if (f.size > maxBytes) {
+        $('#msg').textContent = 'تم حفظ الفاتورة لكن حجم الملف أكبر من 10MB';
+        btn.disabled = false;
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append('file', f);
+      const upRes = await fetch(`/api/invoices/${invOut.data.id}/files`, { method: 'POST', body: fd });
+      let upOut = {};
+      try { upOut = await upRes.json(); } catch {}
+      if (!upRes.ok || !upOut.ok) {
+        $('#msg').textContent = 'تم حفظ الفاتورة لكن فشل رفع الملف (تحقق من النوع/الحجم)';
+        btn.disabled = false;
+        return;
+      }
+    }
+
+    // 3) نجاح كامل
+    $('#msg').textContent = 'تم إنشاء الفاتورة ✅';
+    e.target.reset();
+    recalc();
+  } catch (err) {
+    $('#msg').textContent = 'حدث خطأ غير متوقع';
+  } finally {
+    btn.disabled = false;
   }
-
-  $('#msg').textContent = 'تم إنشاء الفاتورة ✅';
-  e.target.reset(); recalc();
 });
 
-fillLists(); recalc();
+fillLists();
+recalc();
