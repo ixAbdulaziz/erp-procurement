@@ -52,36 +52,38 @@ $('#f').addEventListener('submit', async (e) => {
     const f = $('#file').files[0];
     if (f) {
       const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
-      const maxBytes = 10 * 1024 * 1024; // 10MB
+      const maxBytes = 20 * 1024 * 1024; // 20MB - مطابق للسيرفر
       if (!allowed.includes(f.type)) {
         $('#msg').textContent = 'تم حفظ الفاتورة لكن نوع الملف غير مدعوم (PDF/PNG/JPG/WEBP)';
         btn.disabled = false;
         return;
       }
       if (f.size > maxBytes) {
-        $('#msg').textContent = 'تم حفظ الفاتورة لكن حجم الملف أكبر من 10MB';
+        $('#msg').textContent = 'تم حفظ الفاتورة لكن حجم الملف أكبر من 20MB';
         btn.disabled = false;
         return;
       }
 
       const fd = new FormData();
       fd.append('file', f);
-      const upRes = await fetch(`/api/invoices/${invOut.data.id}/files`, { method: 'POST', body: fd });
-let upOut = {};
-try { upOut = await upRes.json(); } catch {}
-if (!upRes.ok || !upOut.ok) {
-  const why = (upOut && upOut.error) ? `: ${upOut.error}` : '';
-  $('#msg').textContent = 'تم حفظ الفاتورة لكن فشل رفع الملف' + why;
-  btn.disabled = false;
-  return;
-}
 
+      const upRes = await fetch(`/api/invoices/${invOut.data.id}/files`, { method: 'POST', body: fd });
+      let upOut = {};
+      try { upOut = await upRes.json(); } catch {}
+      if (!upRes.ok || !upOut.ok) {
+        const why = (upOut && upOut.error) ? `: ${upOut.error}` : '';
+        $('#msg').textContent = 'تم حفظ الفاتورة لكن فشل رفع الملف' + why;
+        btn.disabled = false;
+        return;
+      }
+    } // <-- كان هذا القوس مفقود
 
     // 3) نجاح كامل
     $('#msg').textContent = 'تم إنشاء الفاتورة ✅';
     e.target.reset();
     recalc();
   } catch (err) {
+    console.error(err);
     $('#msg').textContent = 'حدث خطأ غير متوقع';
   } finally {
     btn.disabled = false;
