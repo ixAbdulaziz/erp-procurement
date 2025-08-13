@@ -17,20 +17,8 @@
   </header>
 
   <main>
+    <!-- المدفوعات أولاً -->
     <section class="card">
-      <h2>فواتير المورد</h2>
-      <table id="invTbl" border="1" cellpadding="8" style="width:100%;background:#fff;">
-        <thead>
-          <tr>
-            <th>التاريخ</th><th>رقم الفاتورة</th><th>الفئة</th>
-            <th>قبل الضريبة</th><th>الضريبة</th><th>الإجمالي</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <section class="card" style="margin-top:16px;">
       <h2>المدفوعات (على مستوى المورد)</h2>
       <form id="payForm" style="margin-bottom:8px;">
         <label>المبلغ:</label>
@@ -51,6 +39,21 @@
       </table>
 
       <div id="totals" style="margin-top:8px;font-weight:bold;"></div>
+    </section>
+
+    <!-- الفواتير بعد المدفوعات -->
+    <section class="card" style="margin-top:16px;">
+      <h2>فواتير المورد</h2>
+      <table id="invTbl" border="1" cellpadding="8" style="width:100%;background:#fff;">
+        <thead>
+          <tr>
+            <th>التاريخ</th><th>رقم الفاتورة</th><th>الفئة</th>
+            <th>البيان</th><th>الملاحظات</th>
+            <th>قبل الضريبة</th><th>الضريبة</th><th>الإجمالي</th><th>الملف</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </section>
   </main>
 
