@@ -12,18 +12,25 @@ app.use(express.json());
 // ===== Uploads (مؤقّت) =====
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
   filename: (_req, file, cb) => cb(null, Date.now() + '-' + file.originalname.replace(/\s+/g, '_'))
 });
+
+const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
   fileFilter: (_req, file, cb) => {
-    const ok = ['application/pdf','image/png','image/jpeg','image/webp'].includes(file.mimetype);
-    cb(ok ? null : new Error('صيغة ملف غير مدعومة (PDF/PNG/JPG/WEBP فقط)'));
+    if (!ALLOWED_TYPES.includes(file.mimetype)) {
+      return cb(new Error('نوع الملف غير مدعوم. المسموح: PDF/PNG/JPG/WEBP'));
+    }
+    cb(null, true);
   }
 });
+
 app.use('/uploads', express.static(uploadDir));
 
 // ===== Helpers =====
