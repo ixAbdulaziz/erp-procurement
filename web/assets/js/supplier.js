@@ -9,7 +9,7 @@ async function load(){
   if(!out.ok){ $('#title').textContent = 'خطأ'; return; }
   $('#title').textContent = `المورد: ${out.supplier.name}`;
 
-  // --- المدفوعات (أعلى الصفحة) ---
+  // المدفوعات
   const payBody = $('#payTbl tbody');
   if(out.payments.length === 0){
     payBody.innerHTML = '<tr><td colspan="3">لا يوجد مدفوعات</td></tr>';
@@ -26,7 +26,7 @@ async function load(){
     `إجمالي الفواتير: ${fmt(out.totals.totalInvoices)} — إجمالي المدفوع: ${fmt(out.totals.totalPaid)} — المستحق: ${fmt(out.totals.due)}`;
   $('#payDate').value = new Date().toISOString().slice(0,10);
 
-  // --- الفواتير (تأكد من ترتيب الأعمدة) ---
+  // الفواتير
   const invBody = $('#invTbl tbody');
   if(out.invoices.length === 0){
     invBody.innerHTML = '<tr><td colspan="9">لا يوجد فواتير</td></tr>';
@@ -34,36 +34,26 @@ async function load(){
   }
 
   invBody.innerHTML = out.invoices.map(x=>{
-    const fileCell = x.fileUrl
-      ? `<a href="${x.fileUrl}" target="_blank" rel="noopener">عرض${x.filesCount>1?` (+${x.filesCount-1})`:''}</a>`
+    const filesHtml = (x.files && x.files.length)
+      ? x.files.map(f => `<a href="${f.url}" target="_blank" rel="noopener">${f.name || 'ملف'}</a>`).join('<br>')
       : '—';
-    // الترتيب هنا يطابق الهيدر 100%
-    const cols = [
-      new Date(x.invoiceDate).toLocaleDateString('ar-SA'),    // التاريخ
-      x.invoiceNumber,                                        // رقم الفاتورة
-      x.categoryName || '',                                   // الفئة
-      x.description || '',                                    // البيان
-      x.notes || '',                                          // الملاحظات
-      fmt(x.amountBeforeTax),                                 // قبل الضريبة
-      fmt(x.taxAmount),                                       // الضريبة
-      fmt(x.totalAmount),                                     // الإجمالي
-      fileCell                                                // الملف
-    ];
-    return `<tr>
-      <td>${cols[0]}</td>
-      <td>${cols[1]}</td>
-      <td>${cols[2]}</td>
-      <td class="wrap">${cols[3]}</td>
-      <td class="wrap">${cols[4]}</td>
-      <td>${cols[5]}</td>
-      <td>${cols[6]}</td>
-      <td>${cols[7]}</td>
-      <td>${cols[8]}</td>
-    </tr>`;
+    return `
+      <tr>
+        <td>${new Date(x.invoiceDate).toLocaleDateString('ar-SA')}</td>
+        <td>${x.invoiceNumber}</td>
+        <td>${x.categoryName || ''}</td>
+        <td class="wrap">${x.description || ''}</td>
+        <td class="wrap">${x.notes || ''}</td>
+        <td>${fmt(x.amountBeforeTax)}</td>
+        <td>${fmt(x.taxAmount)}</td>
+        <td>${fmt(x.totalAmount)}</td>
+        <td>${filesHtml}</td>
+      </tr>
+    `;
   }).join('');
 }
 
-// إضافة دفعة على المورد
+// إضافة دفعة
 $('#payForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   $('#payMsg').textContent = 'جارٍ الحفظ...';
