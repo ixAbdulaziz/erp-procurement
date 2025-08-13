@@ -291,26 +291,54 @@ app.get('/api/invoices', async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// رفع ملف للفاتورة
-app.post('/api/invoices/:id/files', upload.single('file'), async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    const inv = await prisma.invoice.findUnique({ where: { id } });
-    if (!inv) return res.status(404).json({ ok: false, error: 'الفاتورة غير موجودة' });
+// رفع ملف للفاتورة (مع معالجة أخطاء Multer)
+app.post('/api/invoices/:id/files', (req, res) => {
+  upload.single('file')(req, res, async (err) => {
+    // أخطاء من Multer (الحجم/النوع/الخ..)
+    if (err) {
+      let msg = err.message || 'فشل رفع الملف';
+      if (err.code === 'LIMIT_FILE_SIZE') msg = 'حجم الملف أكبر من الحد المسموح (حدنا 20MB)';
+      return res.status(400).json({ ok: false, error: msg });
+    }
+
+    // لم يأتِ ملف
     const f = req.file;
     if (!f) return res.status(400).json({ ok: false, error: 'لم يتم إرفاق ملف' });
 
-    const rec = await prisma.invoiceFile.create({
-      data: {
-        invoiceId: id,
-        fileUrl: `/uploads/${f.filename}`,
-        fileName: f.originalname,
-        contentType: f.mimetype,
-        sizeBytes: f.size
-      }
+    try {
+      const id = Number(req.params.id);
+      const inv = await prisma.invoice.findUnique({ where: { id } });
+      if (!inv) return res.status(404).json({ ok: false, error: 'الفاتورة غير موجودة' });
+
+      const rec = await prisma.invoiceFile.create({
+        data: {
+          invoiceId: id,
+          fileUrl: `/uploads/${f.filename}`,
+          fileName: f.originalname,
+          contentType: f.mimetype,
+          sizeBytes: f.size
+        }
+      });
+      return res.status(201).json({ ok: true, data: rec });
+    } catch (e) {
+      console.error('Upload error:', e);
+      return res.status(500).json({ ok: false, error: 'خطأ داخلي أثناء حفظ الملف' });
+    }
+  });
+});
+
+// (اختياري للتأكد) جلب ملفات فاتورة
+app.get('/api/invoices/:id/files', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const files = await prisma.invoiceFile.findMany({
+      where: { invoiceId: id },
+      orderBy: { createdAt: 'desc' }
     });
-    res.status(201).json({ ok: true, data: rec });
-  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    res.json({ ok: true, data: files });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // تفاصيل فاتورة (بدون مدفوع/مستحق)
