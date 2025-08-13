@@ -4,8 +4,8 @@
   "description": "Simple ERP Procurement",
   "main": "server.js",
   "scripts": {
-    "prestart": "prisma generate && prisma db push",
-    "start": "node server.js"
+  "prestart": "prisma generate && prisma db push --accept-data-loss",
+  "start": "node server.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
