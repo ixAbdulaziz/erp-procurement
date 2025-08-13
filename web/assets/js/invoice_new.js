@@ -67,14 +67,15 @@ $('#f').addEventListener('submit', async (e) => {
       const fd = new FormData();
       fd.append('file', f);
       const upRes = await fetch(`/api/invoices/${invOut.data.id}/files`, { method: 'POST', body: fd });
-      let upOut = {};
-      try { upOut = await upRes.json(); } catch {}
-      if (!upRes.ok || !upOut.ok) {
-        $('#msg').textContent = 'تم حفظ الفاتورة لكن فشل رفع الملف (تحقق من النوع/الحجم)';
-        btn.disabled = false;
-        return;
-      }
-    }
+let upOut = {};
+try { upOut = await upRes.json(); } catch {}
+if (!upRes.ok || !upOut.ok) {
+  const why = (upOut && upOut.error) ? `: ${upOut.error}` : '';
+  $('#msg').textContent = 'تم حفظ الفاتورة لكن فشل رفع الملف' + why;
+  btn.disabled = false;
+  return;
+}
+
 
     // 3) نجاح كامل
     $('#msg').textContent = 'تم إنشاء الفاتورة ✅';
