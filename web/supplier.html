@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>مورد</title>
   <link rel="stylesheet" href="./assets/css/style.css" />
+  <style>
+    table { border-collapse: collapse; }
+    td, th { white-space: nowrap; vertical-align: top; }
+    .wrap { white-space: normal; max-width: 260px; }
+    .muted { color: #666; }
+  </style>
 </head>
 <body>
   <header>
@@ -47,13 +53,20 @@
       <table id="invTbl" border="1" cellpadding="8" style="width:100%;background:#fff;">
         <thead>
           <tr>
-            <th>التاريخ</th><th>رقم الفاتورة</th><th>الفئة</th>
-            <th>البيان</th><th>الملاحظات</th>
-            <th>قبل الضريبة</th><th>الضريبة</th><th>الإجمالي</th><th>الملف</th>
+            <th>التاريخ</th>
+            <th>رقم الفاتورة</th>
+            <th>الفئة</th>
+            <th>البيان</th>
+            <th>الملاحظات</th>
+            <th>قبل الضريبة</th>
+            <th>الضريبة</th>
+            <th>الإجمالي</th>
+            <th>الملف</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
+      <div class="muted" style="margin-top:6px;">* إذا كان للفاتورة أكثر من ملف سيظهر رابط “عرض (+N)”.</div>
     </section>
   </main>
 
