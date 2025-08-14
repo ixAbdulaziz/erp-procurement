@@ -373,7 +373,7 @@ app.post('/api/purchase-orders', async (req, res) => {
     res.status(201).json({ ok: true, data: { ...created, poNumber: finalNumber } });
   } catch (e) {
     if (e?.code === 'P2002') return res.status(409).json({ ok: false, error: 'رقم أمر الشراء مستخدم بالفعل' });
-    res.status(500).json({ ok: false, error: e.message });
+    res.status(500).json({ ok: false, error: e.message }); 
   }
 });
 
@@ -443,4 +443,73 @@ app.post('/api/purchase-orders/:id/link-invoices', async (req, res) => {
     }
 
     await prisma.$transaction(invoices.map(inv => prisma.poInvoice.create({ data: { poId: id, invoiceId: inv.id } })));
-    res.status(201).json({
+    res.status(201).json({ ok: true, linked: invoices.length, sum });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// قائمة أوامر الشراء مع حالة المطابقة
+app.get('/api/purchase-orders', async (_req, res) => {
+  try {
+    const rows = await prisma.$queryRaw`
+      SELECT po.id, po."poNumber", po."poDate", po.amount, s.name AS "supplierName",
+             COALESCE(SUM(i."totalAmount"),0) AS "sumInvoices"
+      FROM "PurchaseOrder" po
+      JOIN "Supplier" s ON s.id = po."supplierId"
+      LEFT JOIN "PoInvoice" pi ON pi."poId" = po.id
+      LEFT JOIN "Invoice" i ON i.id = pi."invoiceId"
+      GROUP BY po.id, s.name
+      ORDER BY po."poDate" DESC
+    `;
+    const data = rows.map(r => ({
+      id: Number(r.id),
+      poNumber: r.poNumber,
+      poDate: r.poDate,
+      supplierName: r.supplierName,
+      amount: Number(r.amount),
+      sumInvoices: Number(r.sumInvoices || 0),
+      status: Math.round(Number(r.amount)*100) === Math.round(Number(r.sumInvoices||0)*100) ? 'مطابق' : 'غير مطابق'
+    }));
+    res.json({ ok: true, data });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// تفاصيل أمر شراء
+app.get('/api/purchase-orders/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const po = await prisma.purchaseOrder.findUnique({
+      where: { id },
+      include: {
+        supplier: { select: { name: true } },
+        invoices: { include: { invoice: { select: { id: true, invoiceNumber: true, totalAmount: true, invoiceDate: true } } } }
+      }
+    });
+    if (!po) return res.status(404).json({ ok: false, error: 'غير موجود' });
+    const sum = po.invoices.reduce((s, x) => s + Number(x.invoice.totalAmount), 0);
+    res.json({
+      ok: true,
+      data: {
+        id: po.id,
+        poNumber: po.poNumber,
+        poDate: po.poDate,
+        supplierName: po.supplier.name,
+        amount: Number(po.amount),
+        description: po.description || null,
+        fileUrl: po.fileUrl || null,
+        invoices: po.invoices.map(x => ({
+          id: x.invoice.id,
+          invoiceNumber: x.invoice.invoiceNumber,
+          invoiceDate: x.invoice.invoiceDate,
+          totalAmount: Number(x.invoice.totalAmount)
+        })),
+        sumInvoices: sum
+      }
+    });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+/* ================= Static ================= */
+app.use(express.static(path.join(__dirname, 'web')));
+app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'web', 'index.html')));
+
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
