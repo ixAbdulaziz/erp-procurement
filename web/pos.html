@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>أوامر الشراء</title>
+  <link rel="stylesheet" href="./assets/css/style.css" />
+  <style>
+    .btn { padding:8px 12px; border:0; border-radius:8px; cursor:pointer; }
+    .btn-primary { background:#2563eb; color:#fff; }
+    .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:50; }
+    .modal{ background:#fff; width:min(900px,95vw); max-height:90vh; overflow:auto; border-radius:12px; padding:16px; }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .full{ grid-column: 1 / -1; }
+    select[multiple]{ min-height:160px; }
+    .muted{ color:#666; font-size:12px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>أوامر الشراء</h1>
+  <nav>
+    <a href="/">الرئيسية</a>
+    <a href="/invoice_new.html">إنشاء فاتورة</a>
+    <a href="/invoices.html">الموردون</a>
+  </nav>
+</header>
+
+<main>
+<section class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <div></div>
+    <button id="openModal" class="btn btn-primary">+ إضافة أمر شراء</button>
+  </div>
+
+  <table id="tbl" border="1" cellpadding="8" style="width:100%;background:#fff;">
+    <thead>
+      <tr>
+        <th>التاريخ</th><th>رقم أمر الشراء</th><th>المورد</th>
+        <th>مبلغ أمر الشراء</th><th>مجموع الفواتير</th><th>الحالة</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <div id="listMsg" style="margin-top:8px;"></div>
+</section>
+</main>
+
+<!-- Modal -->
+<div id="backdrop" class="modal-backdrop">
+  <div class="modal">
+    <h2 style="margin-bottom:8px;">إضافة أمر شراء</h2>
+    <form id="poForm">
+      <div class="grid">
+        <div>
+          <label>اسم المورد *</label><br>
+          <input id="supplierName" list="suppliersList" required placeholder="اكتب اسم المورد">
+          <datalist id="suppliersList"></datalist>
+        </div>
+        <div>
+          <label>التاريخ *</label><br>
+          <input id="poDate" type="date" required>
+        </div>
+        <div>
+          <label>المبلغ *</label><br>
+          <input id="amount" type="number" step="0.01" required>
+        </div>
+        <div>
+          <label>البيان</label><br>
+          <input id="description" placeholder="وصف مختصر">
+        </div>
+        <div class="full">
+          <label>ملف (PDF/صورة)</label><br>
+          <input id="file" type="file" accept=".pdf,image/*">
+        </div>
+
+        <div class="full">
+          <label>ربط فواتير (لنفس المورد وغير مربوطة بعد)</label><br>
+          <select id="invoiceIds" multiple></select>
+          <div id="sum" class="muted" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn btn-primary" type="submit">حفظ</button>
+        <button class="btn" type="button" id="closeModal">إلغاء</button>
+        <span id="msg" style="align-self:center;margin-inline-start:8px;"></span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="./assets/js/pos.js"></script>
+</body>
+</html>
