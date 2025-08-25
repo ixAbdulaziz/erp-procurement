@@ -3,17 +3,60 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>الموردون – فواتير ومدفوعات</title>
+  <title>الموردون</title>
 
-  <!-- خط عربي حديث -->
+  <!-- خط وثيم -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <!-- الثيم الداكن الذي وضعناه في style.css -->
   <link rel="stylesheet" href="./assets/css/style.css" />
+
+  <style>
+    /* إضافات شكل البطاقات الشبكية كما في التصميم */
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .toolbar .left{display:flex;gap:8px;align-items:center}
+    .toolbar .right{display:flex;gap:8px;align-items:center}
+    .iconbtn{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;border:1px solid var(--border);background:#1c2536;color:var(--text)}
+    .iconbtn:hover{background:#1a2231}
+
+    .search{min-width:280px}
+
+    .section-title{display:flex;align-items:center;gap:8px;margin:6px 0 10px;color:var(--muted);font-weight:700}
+    .section-title .dot{width:10px;height:10px;border-radius:50%;background:#94a3b8;opacity:.6}
+
+    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    @media (max-width:1100px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:720px){.cards{grid-template-columns:1fr}}
+
+    .supplier-card{
+      background:linear-gradient(180deg,#0f172a77,#0f172a22),var(--panel);
+      border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:14px;
+      position:relative;
+    }
+    .supplier-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .supplier-name{font-weight:700}
+    .supplier-pin{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:#cbd5e1}
+    .supplier-pin svg{opacity:.6}
+    .supplier-pin.active{color:#facc15}
+    .supplier-pin.active svg{opacity:1}
+
+    .metric{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);
+      background:#162035;border-radius:10px;padding:8px 10px;margin:8px 0}
+    .metric .label{color:var(--muted);font-size:12px}
+    .metric .value{font-weight:700}
+    .metric.bill .value{color:#60a5fa}
+    .metric.paid .value{color:#34d399}
+    .metric.due .value{color:#facc15}
+    .metric.count .value{color:#cbd5e1}
+
+    .card-actions{display:flex;align-items:center;justify-content:flex-end;margin-top:8px}
+    .card-actions a{display:inline-flex;align-items:center;gap:6px}
+    .card-actions svg{opacity:.7}
+
+    .empty-hint{height:12px}
+  </style>
 </head>
 <body>
-  <!-- Navbar موحّد -->
+  <!-- Navbar -->
   <header>
     <h1>نظام المشتريات</h1>
     <nav id="mainNav">
@@ -24,7 +67,6 @@
     </nav>
   </header>
   <script>
-    // يظلل رابط الصفحة الحالية في الـ Navbar
     (function markActive(){
       const p = location.pathname.replace(/\/+$/, '') || '/';
       document.querySelectorAll('#mainNav a').forEach(a=>{
@@ -38,54 +80,33 @@
   </script>
 
   <main>
-    <!-- بطاقة العنوان / شريط أدوات بسيط -->
-    <section class="card center" style="justify-content:space-between;">
-      <div class="center" style="gap:10px;">
-        <h2 style="margin:0;">الموردون (فواتير ومدفوعات)</h2>
+    <!-- شريط أدوات علوي -->
+    <section class="card toolbar">
+      <div class="left">
+        <button id="btnAll" class="iconbtn" title="كل الموردين">👥</button>
+        <button id="btnRefresh" class="btn">تحديث ↻</button>
       </div>
-      <div class="center" style="gap:8px;">
-        <!-- بإمكاننا لاحقاً ربط هذا الحقل ببحث فوري -->
-        <input id="q" placeholder="ابحث باسم المورد…" style="max-width:240px">
-        <button id="clearQ" class="btn">مسح</button>
+      <div class="right">
+        <input id="search" class="search" placeholder="البحث في المورّدين…" />
       </div>
     </section>
 
-    <!-- جدول الموردين -->
+    <!-- قسم المثبتين -->
     <section class="card">
-      <table id="tbl" class="table">
-        <thead>
-          <tr>
-            <th>المورد</th>
-            <th>إجمالي الفواتير</th>
-            <th>إجمالي المدفوع</th>
-            <th>المستحق</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="muted" style="margin-top:8px">انقر على اسم المورد لفتح صفحته.</div>
+      <div class="section-title"><span class="dot"></span><span>الموردون المثبتون</span></div>
+      <div id="pinnedWrap" class="cards"></div>
+      <div id="pinnedEmpty" class="muted empty-hint">لا يوجد موردون مثبتون.</div>
+    </section>
+
+    <!-- باقي الموردين -->
+    <section class="card">
+      <div class="section-title"><span class="dot"></span><span>باقي الموردين</span></div>
+      <div id="othersWrap" class="cards"></div>
+      <div id="othersEmpty" class="muted empty-hint"></div>
     </section>
   </main>
 
-  <!-- سكربت الصفحة الأصلي (يجلب البيانات ويرسم الصفوف) -->
+  <!-- سكربت المنطق -->
   <script src="./assets/js/invoices.js"></script>
-
-  <script>
-    // بحث بسيط اختياري: يفلتر الصفوف التي يرسمها invoices.js بعد التحميل
-    (function simpleFilter(){
-      const Q = document.getElementById('q');
-      const CLR = document.getElementById('clearQ');
-      function doFilter(){
-        const v = Q.value.trim();
-        const rows = document.querySelectorAll('#tbl tbody tr');
-        rows.forEach(tr=>{
-          const name = (tr.querySelector('td')?.textContent || '').trim();
-          tr.style.display = v && !name.includes(v) ? 'none' : '';
-        });
-      }
-      Q.addEventListener('input', doFilter);
-      CLR.addEventListener('click', ()=>{ Q.value=''; doFilter(); Q.focus(); });
-    })();
-  </script>
 </body>
 </html>
