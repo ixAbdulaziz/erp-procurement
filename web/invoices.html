@@ -3,32 +3,89 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>عرض الفواتير حسب المورد</title>
+  <title>الموردون – فواتير ومدفوعات</title>
+
+  <!-- خط عربي حديث -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- الثيم الداكن الذي وضعناه في style.css -->
   <link rel="stylesheet" href="./assets/css/style.css" />
 </head>
 <body>
+  <!-- Navbar موحّد -->
   <header>
-    <h1>الموردون (فواتير ومدفوعات)</h1>
-    <nav>
-      <a href="/">الرئيسية</a>
-      <a href="/suppliers.html">الموردون</a>
-      <a href="/invoice_new.html">إنشاء فاتورة</a>
-      <a href="/invoices.html">عرض الفواتير</a>
+    <h1>نظام المشتريات</h1>
+    <nav id="mainNav">
+      <a href="/" data-match="/">الرئيسية</a>
+      <a href="/invoice_new.html" data-match="/invoice_new.html">إنشاء فاتورة</a>
+      <a href="/invoices.html" data-match="/invoices.html">الموردون</a>
+      <a href="/pos.html" data-match="/pos.html">أوامر الشراء</a>
     </nav>
   </header>
+  <script>
+    // يظلل رابط الصفحة الحالية في الـ Navbar
+    (function markActive(){
+      const p = location.pathname.replace(/\/+$/, '') || '/';
+      document.querySelectorAll('#mainNav a').forEach(a=>{
+        const m = a.getAttribute('data-match');
+        if ((m === '/' && p === '/') || (m !== '/' && p.endsWith(m))) {
+          a.style.background = '#1e293b';
+          a.style.borderColor = '#334155';
+        }
+      });
+    })();
+  </script>
 
   <main>
+    <!-- بطاقة العنوان / شريط أدوات بسيط -->
+    <section class="card center" style="justify-content:space-between;">
+      <div class="center" style="gap:10px;">
+        <h2 style="margin:0;">الموردون (فواتير ومدفوعات)</h2>
+      </div>
+      <div class="center" style="gap:8px;">
+        <!-- بإمكاننا لاحقاً ربط هذا الحقل ببحث فوري -->
+        <input id="q" placeholder="ابحث باسم المورد…" style="max-width:240px">
+        <button id="clearQ" class="btn">مسح</button>
+      </div>
+    </section>
+
+    <!-- جدول الموردين -->
     <section class="card">
-      <table id="tbl" border="1" cellpadding="8" style="width:100%;background:#fff;">
+      <table id="tbl" class="table">
         <thead>
-          <tr><th>المورد</th><th>إجمالي الفواتير</th><th>إجمالي المدفوع</th><th>المستحق</th></tr>
+          <tr>
+            <th>المورد</th>
+            <th>إجمالي الفواتير</th>
+            <th>إجمالي المدفوع</th>
+            <th>المستحق</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
-      <div style="margin-top:8px;">انقر على المورد لفتح صفحته.</div>
+      <div class="muted" style="margin-top:8px">انقر على اسم المورد لفتح صفحته.</div>
     </section>
   </main>
 
+  <!-- سكربت الصفحة الأصلي (يجلب البيانات ويرسم الصفوف) -->
   <script src="./assets/js/invoices.js"></script>
+
+  <script>
+    // بحث بسيط اختياري: يفلتر الصفوف التي يرسمها invoices.js بعد التحميل
+    (function simpleFilter(){
+      const Q = document.getElementById('q');
+      const CLR = document.getElementById('clearQ');
+      function doFilter(){
+        const v = Q.value.trim();
+        const rows = document.querySelectorAll('#tbl tbody tr');
+        rows.forEach(tr=>{
+          const name = (tr.querySelector('td')?.textContent || '').trim();
+          tr.style.display = v && !name.includes(v) ? 'none' : '';
+        });
+      }
+      Q.addEventListener('input', doFilter);
+      CLR.addEventListener('click', ()=>{ Q.value=''; doFilter(); Q.focus(); });
+    })();
+  </script>
 </body>
 </html>
